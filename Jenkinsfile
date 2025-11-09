@@ -24,7 +24,7 @@ pipeline {
 
         stage('Test'){
             steps{
-                ehco 'Test stage'
+                sh 'test =f build/index.html'
             }
         }
     }
