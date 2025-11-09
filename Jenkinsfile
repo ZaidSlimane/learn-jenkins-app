@@ -1,8 +1,7 @@
 pipeline {
-    agent any
+    agent none
 
     stages {
-
         stage('Build') {
             agent {
                 docker {
@@ -12,29 +11,25 @@ pipeline {
             }
             steps {
                 sh '''
-                    ls -la
-                    node --version
-                    npm --version
+                    echo "=== BUILDING INSIDE DOCKER ==="
                     npm ci
                     npm run build
-                    ls -la
+                    ls -la build/
                 '''
             }
         }
 
-        stage('Tests') {
+        stage('Test') {
             parallel {
-                stage('Unit tests') {
+                stage('Junit test') {
                     agent {
                         docker {
                             image 'node:18-alpine'
                             reuseNode true
                         }
                     }
-
                     steps {
                         sh '''
-                            #test -f build/index.html
                             npm test
                         '''
                     }
@@ -48,23 +43,29 @@ pipeline {
                 stage('E2E') {
                     agent {
                         docker {
-                            image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                            image 'mcr.microsoft.com/playwright:v1.42.0-focal'
                             reuseNode true
                         }
                     }
-
                     steps {
                         sh '''
-                            npm install serve
-                            node_modules/.bin/serve -s build &
-                            sleep 10
-                            npx playwright test  --reporter=html
+                        npx serve -s build &
+
+
+                            # Run Playwright tests (webServer in playwright.config.js will start the app)
+                            npx playwright test --reporter=html
                         '''
                     }
-
                     post {
                         always {
-                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: false,
+                                keepAll: false,
+                                reportDir: 'playwright-report',
+                                reportFiles: 'index.html',
+                                reportName: 'Playwright E2E Report'
+                            ])
                         }
                     }
                 }
@@ -81,6 +82,7 @@ pipeline {
             steps {
                 sh '''
                     npm install netlify-cli@20.1.1
+                    
                     node_modules/.bin/netlify --version
                 '''
             }
