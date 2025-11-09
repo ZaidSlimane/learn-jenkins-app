@@ -20,5 +20,12 @@ pipeline {
                 '''
             }
         }
+
+
+        stage('Test'){
+            steps{
+                ehco 'Test stage'
+            }
+        }
     }
 }
